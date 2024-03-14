@@ -2,3 +2,6 @@
 แก้ไข่ส่วน edit
 เพิ่มลบcard
 Ngrok แชร์localhost
+
+โปรแกรมใช้งานแทนXampp 
+IIS

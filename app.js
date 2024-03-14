@@ -95,7 +95,8 @@ app.get('/search', function (req, res, next) {
         return;
       }
 
-      res.json({ status: 'ok', insects: results });
+      const resx = results.map(r => ({ id: r.id, name: r.name, data: r.data, pic_name: req.protocol + '://' + req.get('host') + req.baseUrl + '/uploads/' + r.pic_name }));
+      res.json({ status: 'ok', insects: resx });
     }
   );
 });
@@ -153,9 +154,9 @@ app.post('/save_insects', function (req, res, next) {
   const data = req.body.Data || null; // Use null if data is not provided
   const pic_name = req.body.pic_name || null; // Use null if data is not provided
 
-  console.log(name);
-  console.log(data);
-  console.log(pic_name);
+  // console.log(name);
+  // console.log(data);
+  // console.log(pic_name);
 
   if (!name) {
     return res.status(400).json({ status: 'error', message: 'Name field is required' });
@@ -242,6 +243,22 @@ app.put('/insects/:id', jsonParser, function (req, res, next) {
 //   );
 // });
 
+
+
+app.delete('/insects/:id', function (req, res, next) {
+  const insectId = req.params.id;
+  connection.execute(
+    'DELETE FROM insects WHERE id = ?',
+    [insectId],
+    function (err, results, fields) {
+      if (err) {
+        res.status(500).json({ status: 'error', message: err });
+        return;
+      }
+      res.json({ status: 'ok', message: 'Insect deleted successfully' });
+    }
+  );
+});
 
 
 
