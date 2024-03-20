@@ -245,8 +245,44 @@ app.put('/insects/:id', jsonParser, function (req, res, next) {
 
 
 
+const fs = require('fs');
+
 app.delete('/insects/:id', function (req, res, next) {
   const insectId = req.params.id;
+  connection.execute(
+    'SELECT pic_name FROM insects WHERE id = ?',
+    [insectId],
+    function (err, results, fields) {
+      if (err) {
+        res.status(500).json({ status: 'error', message: err });
+        return;
+      }
+      if (results.length === 0) {
+        res.status(404).json({ status: 'error', message: 'Insect not found' });
+        return;
+      }
+      const picName = results[0].pic_name;
+      if (!picName) {
+        // If there's no associated photo, just delete the insect data
+        deleteInsectData(insectId, res);
+      } else {
+        // Delete the photo file from the server's file system
+        const filePath = path.join(__dirname, 'public/uploads', picName);
+        fs.unlink(filePath, function (err) {
+          if (err) {
+            console.error('Error deleting photo file:', err);
+            res.status(500).json({ status: 'error', message: 'Failed to delete photo file' });
+            return;
+          }
+          // Delete the insect data after successfully deleting the photo file
+          deleteInsectData(insectId, res);
+        });
+      }
+    }
+  );
+});
+
+function deleteInsectData(insectId, res) {
   connection.execute(
     'DELETE FROM insects WHERE id = ?',
     [insectId],
@@ -255,10 +291,10 @@ app.delete('/insects/:id', function (req, res, next) {
         res.status(500).json({ status: 'error', message: err });
         return;
       }
-      res.json({ status: 'ok', message: 'Insect deleted successfully' });
+      res.json({ status: 'ok', message: 'Insect and associated photo deleted successfully' });
     }
   );
-});
+}
 
 
 
