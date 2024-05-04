@@ -59,6 +59,7 @@ app.post('/login', jsonParser, function (req, res, next) {
   );
 })
 
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'public/uploads'); // Destination folder for storing images
@@ -87,7 +88,7 @@ app.get('/search', function (req, res, next) {
   }
 
   connection.execute(
-    'SELECT id, name, data, pic_name FROM insects WHERE name LIKE ?',
+    'SELECT id, name, data, pic_name, scientific_name, order_name, family FROM insects WHERE name LIKE ?',
     [`%${searchTerm}%`],
     function (err, results, fields) {
       if (err) {
@@ -95,7 +96,7 @@ app.get('/search', function (req, res, next) {
         return;
       }
 
-      const resx = results.map(r => ({ id: r.id, name: r.name, data: r.data, pic_name: req.protocol + '://' + req.get('host') + req.baseUrl + '/uploads/' + r.pic_name }));
+      const resx = results.map(r => ({ id: r.id, name: r.name, scientific_name: r.scientific_name, order_name: r.order_name, family: r.family, data: r.data, pic_name: req.protocol + '://' + req.get('host') + req.baseUrl + '/uploads/' + r.pic_name }));
       res.json({ status: 'ok', insects: resx });
     }
   );
@@ -107,13 +108,13 @@ app.get('/search', function (req, res, next) {
 
 app.get('/insects', function (req, res, next) {
   connection.execute(
-    'SELECT id, name, data, pic_name FROM insects',
+    'SELECT id, name, scientific_name, order_name, family, data, pic_name FROM insects',
     function (err, results, fields) {
       if (err) {
         res.json({ status: 'error', message: err });
         return;
       }
-      const resx = results.map(r => ({ id: r.id, name: r.name, data: r.data, pic_name: req.protocol + '://' + req.get('host') + req.baseUrl + '/uploads/' + r.pic_name }));
+      const resx = results.map(r => ({ id: r.id, name: r.name, scientific_name: r.scientific_name, order_name: r.order_name, family: r.family, data: r.data, pic_name: req.protocol + '://' + req.get('host') + req.baseUrl + '/uploads/' + r.pic_name }));
       res.json({ status: 'ok', insects: resx });
     }
   );
@@ -122,7 +123,7 @@ app.get('/insects', function (req, res, next) {
 app.get('/insects/:id', function (req, res, next) {
   const insectId = req.params.id;
   connection.execute(
-    'SELECT id, name, data, pic_name FROM insects WHERE id = ?',
+    'SELECT id, name, data, pic_name, scientific_name, order_name, family FROM insects WHERE id = ?',
     [insectId],
     function (err, results, fields) {
       if (err) {
@@ -133,7 +134,7 @@ app.get('/insects/:id', function (req, res, next) {
         res.json({ status: 'error', message: 'Insect not found' });
         return;
       }
-      const resx = results.map(r => ({ id: r.id, name: r.name, data: r.data, pic_name: req.protocol + '://' + req.get('host') + req.baseUrl + '/uploads/' + r.pic_name }));
+      const resx = results.map(r => ({ id: r.id, name: r.name, scientific_name: r.scientific_name, order_name: r.order_name, family: r.family, data: r.data, pic_name: req.protocol + '://' + req.get('host') + req.baseUrl + '/uploads/' + r.pic_name }));
       res.json({ status: 'ok', insect: resx });
     }
   );
@@ -151,6 +152,9 @@ app.post('/upload', upload.single('image'), function (req, res, next) {
 app.post('/save_insects', function (req, res, next) {
 
   const name = req.body.Name;
+  const scientific_name = req.body.scientific_name;
+  const order_name = req.body.order_name;
+  const family = req.body.Family;
   const data = req.body.Data || null; // Use null if data is not provided
   const pic_name = req.body.pic_name || null; // Use null if data is not provided
 
@@ -163,8 +167,8 @@ app.post('/save_insects', function (req, res, next) {
   }
 
   connection.query(
-    'INSERT INTO insects (name, data, pic_name) VALUES (?, ?, ?)',
-    [name, data, pic_name],
+    'INSERT INTO insects (name, scientific_name, order_name, family, data, pic_name) VALUES (?, ?, ?, ?, ?, ?)',
+    [name, scientific_name, order_name, family, data, pic_name],
     function (err, results, fields) {
       if (err) {
         return res.status(500).json({ status: 'error', message: err });
@@ -178,8 +182,14 @@ app.post('/save_insects', function (req, res, next) {
 app.put('/insects/:id', jsonParser, function (req, res, next) {
   const insectId = req.params.id;
   const name = req.body.Name || null;
+  const scientific_name = req.body.scientific_name || null;
+  const order_name = req.body.order_name || null;
+  const family = req.body.Family || null;
   const data = req.body.Data || null;
   const picName = req.body.pic_name ?? null
+
+  console.log(req.body.scientific_name);
+
 
   // Add a validation check for the 'name' field
   if (!name) {
@@ -189,8 +199,8 @@ app.put('/insects/:id', jsonParser, function (req, res, next) {
 
   if (picName) { //Have
     connection.execute(
-      'UPDATE insects SET name = ?, data = ?, pic_name = ? WHERE id = ?',
-      [name, data, picName, insectId],
+      'UPDATE insects SET name = ?, scientific_name = ? , order_name = ? , family = ?, data = ?, pic_name = ? WHERE id = ?',
+      [name, scientific_name, order_name, family, data, picName, insectId],
       function (err, results, fields) {
         if (err) {
           res.json({ status: 'error', message: err });
@@ -201,8 +211,8 @@ app.put('/insects/:id', jsonParser, function (req, res, next) {
     );
   } else { //Not Have
     connection.execute(
-      'UPDATE insects SET name = ?, data = ? WHERE id = ?',
-      [name, data, insectId],
+      'UPDATE insects SET name = ?, scientific_name = ?, order_name = ?, family = ?, data = ? WHERE id = ?',
+      [name, scientific_name, order_name, family, data, insectId],
       function (err, results, fields) {
         if (err) {
           res.json({ status: 'error', message: err });
@@ -212,8 +222,6 @@ app.put('/insects/:id', jsonParser, function (req, res, next) {
       }
     );
   }
-
-
 
 });
 
@@ -311,7 +319,7 @@ app.post('/authen', jsonParser, function (req, res, next) {
     res.json({ status: 'error', massage: err.massage })
   }
 })
-
+  
 app.listen(3333, function () {
   console.log('CORS-enabled web server listening on port 3333')
 })
